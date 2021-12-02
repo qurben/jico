@@ -37,7 +37,7 @@
     <scm>
         <connection>scm:git:git://github.com/qurben/jico.git</connection>
         <developerConnection>scm:git:ssh://github.com:qurben/jico.git</developerConnection>
-        <url>https://github.com/qurben/jico/tree/master</url>
+        <url>https://github.com/qurben/jico/tree/main</url>
     </scm>
 
     <distributionManagement>
