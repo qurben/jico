@@ -12,5 +12,5 @@ import jico.Ico;
 ...
 
 JFrame frame = new JFrame();
-frame.setIconImages(Ico.getAllIcoImages(getClass().getClassLoader().getResourceAsStream("favicon.ico")));
+frame.setIconImages(Ico.read(getClass().getClassLoader().getResourceAsStream("favicon.ico")));
 ```
