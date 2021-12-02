@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package jico.formats.ico;
+package jico;
 
 import static jico.common.BinaryFunctions.read2Bytes;
 import static jico.common.BinaryFunctions.read4Bytes;
@@ -30,16 +30,12 @@ import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.List;
 
-import jico.ImageFormat;
-import jico.ImageFormatGuesser;
-import jico.ImageFormats;
-import jico.ImageReadException;
 import jico.common.BinaryOutputStream;
 import jico.common.bytesource.ByteSource;
 
 import javax.imageio.ImageIO;
 
-public class IcoImageParser {
+class IcoImageParser {
     public IcoImageParser() {
     }
 
@@ -399,7 +395,7 @@ public class IcoImageParser {
             throws ImageReadException, IOException {
 
         final ImageFormat imageFormat = new ImageFormatGuesser().guessFormat(iconData);
-        if (imageFormat.equals(ImageFormats.PNG)) {
+        if (imageFormat.equals(ImageFormat.PNG)) {
             return new PNGIconData(fIconInfo, ImageIO.read(new ByteArrayInputStream(iconData)));
         }
         return readBitmapIconData(iconData, fIconInfo);

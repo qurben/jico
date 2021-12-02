@@ -17,7 +17,10 @@
 package jico;
 
 /**
- * Simple image format interface.
+ * Enum of known image formats.
  */
-public interface ImageFormat {
+enum ImageFormat {
+    UNKNOWN,
+    PNG,
+    BMP,
 }

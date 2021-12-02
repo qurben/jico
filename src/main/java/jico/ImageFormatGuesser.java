@@ -4,7 +4,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
-public class ImageFormatGuesser {
+class ImageFormatGuesser {
     private static final int[] MAGIC_NUMBERS_PNG = { 0x89, 0x50, };
     private static final int[] MAGIC_NUMBERS_BMP = { 0x42, 0x4d, };
 
@@ -41,13 +41,13 @@ public class ImageFormatGuesser {
             final int[] bytePair = { b1, b2, };
 
             if (compareBytePair(MAGIC_NUMBERS_PNG, bytePair)) {
-                return ImageFormats.PNG;
+                return ImageFormat.PNG;
             }
             if (compareBytePair(MAGIC_NUMBERS_BMP, bytePair)) {
-                return ImageFormats.BMP;
+                return ImageFormat.BMP;
             }
 
-            return ImageFormats.UNKNOWN;
+            return ImageFormat.UNKNOWN;
         }
     }
 
