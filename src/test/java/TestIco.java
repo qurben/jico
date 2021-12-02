@@ -19,12 +19,12 @@ public class TestIco {
      */
     @Test
     public void testNoExceptionThrown() throws IOException, ImageReadException {
-        Ico.getAllIcoImages(getClass().getClassLoader().getResourceAsStream("github.ico"));
+        Ico.read(getClass().getClassLoader().getResourceAsStream("github.ico"));
     }
 
     @Test
     public void testIcoFile() throws URISyntaxException, IOException, ImageReadException {
-        List<BufferedImage> images = Ico.getAllIcoImages(new File(Objects.requireNonNull(getClass().getClassLoader().getResource("github.ico")).toURI()));
+        List<BufferedImage> images = Ico.read(new File(Objects.requireNonNull(getClass().getClassLoader().getResource("github.ico")).toURI()));
 
         Assertions.assertNotEquals(0, images.size());
     }
@@ -34,7 +34,7 @@ public class TestIco {
      */
     @Test
     public void testIcoUrl() throws IOException, ImageReadException {
-        List<BufferedImage> images = Ico.getAllIcoImages(new URL("https://github.com/favicon.ico"));
+        List<BufferedImage> images = Ico.read(new URL("https://github.com/favicon.ico"));
 
         Assertions.assertNotEquals(0, images.size());
     }
@@ -44,7 +44,7 @@ public class TestIco {
      */
     @Test
     public void testNumberOfImages() throws IOException, ImageReadException {
-        Assertions.assertEquals(2, Ico.getAllIcoImages(getClass().getClassLoader().getResourceAsStream("github.ico")).size());
+        Assertions.assertEquals(2, Ico.read(getClass().getClassLoader().getResourceAsStream("github.ico")).size());
     }
 
     /**
@@ -52,7 +52,7 @@ public class TestIco {
      */
     @Test
     public void testImageSizes() throws IOException, ImageReadException {
-        List<BufferedImage> images = Ico.getAllIcoImages(getClass().getClassLoader().getResourceAsStream("github.ico"));
+        List<BufferedImage> images = Ico.read(getClass().getClassLoader().getResourceAsStream("github.ico"));
 
         BufferedImage img1 = images.get(0);
         BufferedImage img2 = images.get(1);
@@ -69,7 +69,7 @@ public class TestIco {
      */
     @Test
     public void testImageTypes() throws IOException, ImageReadException {
-        List<BufferedImage> images = Ico.getAllIcoImages(getClass().getClassLoader().getResourceAsStream("multi.ico"));
+        List<BufferedImage> images = Ico.read(getClass().getClassLoader().getResourceAsStream("multi.ico"));
 
         Assertions.assertEquals(10, images.size());
 
@@ -92,7 +92,7 @@ public class TestIco {
      */
     @Test
     public void testBmpIco() throws IOException, ImageReadException {
-        List<BufferedImage> images = Ico.getAllIcoImages(getClass().getClassLoader().getResourceAsStream("bmp.ico"));
+        List<BufferedImage> images = Ico.read(getClass().getClassLoader().getResourceAsStream("bmp.ico"));
 
         Assertions.assertEquals(1, images.size());
     }
@@ -102,7 +102,7 @@ public class TestIco {
      */
     @Test
     public void testBmpEqual() throws IOException, ImageReadException {
-        BufferedImage icoImage = Ico.getAllIcoImages(getClass().getClassLoader().getResourceAsStream("bmp.ico")).get(0);
+        BufferedImage icoImage = Ico.read(getClass().getClassLoader().getResourceAsStream("bmp.ico")).get(0);
 
         BufferedImage bmpImage = ImageIO.read(Objects.requireNonNull(getClass().getClassLoader().getResourceAsStream("bmp.bmp")));
 
@@ -114,6 +114,16 @@ public class TestIco {
         // Bitwise comparison of the images.
         for (int i = 0; i < bmpBuffer.getSize(); i++) {
             Assertions.assertEquals(bmpBuffer.getElem(i), icoBuffer.getElem(i));
+        }
+    }
+
+    @Test
+    public void testReadInvalid() throws IOException {
+        try {
+            Ico.read(getClass().getClassLoader().getResourceAsStream("jpg.jpg"));
+            Assertions.fail("Expected an exception to be thrown.");
+        } catch (ImageReadException ex) {
+            Assertions.assertEquals("Not a Valid ICO File: reserved is 55551", ex.getMessage());
         }
     }
 }

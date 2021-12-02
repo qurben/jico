@@ -33,8 +33,7 @@ public final class Ico {
     }
 
     /**
-     * Gets all images specified by the InputStream  (some
-     * formats may include multiple images within a single data source).
+     * Gets all images specified by the InputStream.
      * @param is A valid InputStream
      * @return A valid (potentially empty) list of BufferedImage objects.
      * @throws ImageReadException In the event that the specified
@@ -43,15 +42,25 @@ public final class Ico {
      * @throws IOException In the event of unsuccessful read or
      * access operation.
      */
-    public static List<BufferedImage> getAllIcoImages(final InputStream is) throws ImageReadException, IOException {
+    public static List<BufferedImage> read(final InputStream is) throws ImageReadException, IOException {
         if (is == null) {
             throw new IllegalArgumentException("is == null!");
         }
 
-        return getAllIcoImages(new ByteSourceInputStream(is));
+        return read(new ByteSourceInputStream(is));
     }
 
-    public static List<BufferedImage> getAllIcoImages(final File file) throws  ImageReadException, IOException {
+    /**
+     * Gets all images specified by the File.
+     * @param file A file
+     * @return A valid (potentially empty) list of BufferedImage objects.
+     * @throws ImageReadException In the event that the specified
+     * content does not conform to the format of the specific parser
+     * implementation.
+     * @throws IOException In the event of unsuccessful read or
+     * access operation.
+     */
+    public static List<BufferedImage> read(final File file) throws  ImageReadException, IOException {
         if (file == null) {
             throw new IllegalArgumentException("file == null!");
         }
@@ -60,21 +69,31 @@ public final class Ico {
         }
 
         try (InputStream is = new FileInputStream(file)) {
-            return getAllIcoImages(is);
+            return read(is);
         }
     }
 
-    public static List<BufferedImage> getAllIcoImages(final URL url) throws IOException, ImageReadException {
+    /**
+     * Gets all images specified by the URL to an ico file.
+     * @param url A url
+     * @return A valid (potentially empty) list of BufferedImage objects.
+     * @throws ImageReadException In the event that the specified
+     * content does not conform to the format of the specific parser
+     * implementation.
+     * @throws IOException In the event of unsuccessful read or
+     * access operation.
+     */
+    public static List<BufferedImage> read(final URL url) throws IOException, ImageReadException {
         if (url == null) {
             throw new IllegalArgumentException("input == null!");
         }
 
         try (InputStream is = url.openStream()) {
-            return getAllIcoImages(is);
+            return read(is);
         }
     }
 
-    private static List<BufferedImage> getAllIcoImages(final ByteSource byteSource) throws ImageReadException, IOException {
+    private static List<BufferedImage> read(final ByteSource byteSource) throws ImageReadException, IOException {
         return new IcoImageParser().getAllBufferedImages(byteSource);
     }
 }
