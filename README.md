@@ -1,6 +1,7 @@
 # JICO
 
 [![Java CI with Maven](https://github.com/qurben/jico/actions/workflows/maven.yml/badge.svg)](https://github.com/qurben/jico/actions/workflows/maven.yml)
+[![Maven Central](https://img.shields.io/maven-central/v/io.github.qurben/jico.svg?label=Maven%20Central)](https://search.maven.org/search?q=g:%22io.github.qurben%22%20AND%20a:%22jico%22)
 
 A tiny library to read .ico files in java. Uses `ImageIO` to parse the contained png and bmp files. This package is only about **16KB** and focuses only on loading .ico images.
 
