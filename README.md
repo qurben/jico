@@ -2,7 +2,7 @@
 
 [![Java CI with Maven](https://github.com/qurben/jico/actions/workflows/maven.yml/badge.svg)](https://github.com/qurben/jico/actions/workflows/maven.yml)
 
-Read .ico files in java. Uses `ImageIO` to parse the contained png and bmp files. This package is only about **22KB** and focuses only on loading .ico images.
+A tiny library to read .ico files in java. Uses `ImageIO` to parse the contained png and bmp files. This package is only about **16KB** and focuses only on loading .ico images.
 
 The .ico parser is based on code from [`org.apache.commons:commons-imaging`](https://github.com/apache/commons-imaging).
 

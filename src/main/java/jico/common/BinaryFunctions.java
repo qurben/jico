@@ -18,7 +18,7 @@ package jico.common;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.ByteOrder;
+import java.io.OutputStream;
 
 /**
  * Convenience methods for various binary and I/O operations.
@@ -59,19 +59,7 @@ public final class BinaryFunctions {
         return readBytes(is, count, "Unexpected EOF");
     }
 
-    public static void skipBytes(final InputStream is, final long length, final String exception)
-            throws IOException {
-        long total = 0;
-        while (length != total) {
-            final long skipped = is.skip(length - total);
-            if (skipped < 1) {
-                throw new IOException(exception + " (" + skipped + ")");
-            }
-            total += skipped;
-        }
-    }
-
-    public static int read4Bytes(final InputStream is, final String exception, final ByteOrder byteOrder) throws IOException {
+    public static int readInt(final InputStream is, final String exception) throws IOException {
         final int byte0 = is.read();
         final int byte1 = is.read();
         final int byte2 = is.read();
@@ -80,37 +68,28 @@ public final class BinaryFunctions {
             throw new IOException(exception);
         }
 
-        final int result;
-        if (byteOrder == ByteOrder.BIG_ENDIAN) {
-            result = (byte0 << 24) | (byte1 << 16)
-                    | (byte2 << 8) | (byte3 << 0);
-        } else {
-            result = (byte3 << 24) | (byte2 << 16)
-                    | (byte1 << 8) | (byte0 << 0);
-        }
-
-        return result;
+        return (byte3 << 24) | (byte2 << 16) | (byte1 << 8) | (byte0);
     }
 
-    public static int read2Bytes(final InputStream is,
-                                 final String exception, final ByteOrder byteOrder) throws IOException {
+    public static int readShort(final InputStream is, final String exception) throws IOException {
         final int byte0 = is.read();
         final int byte1 = is.read();
         if ((byte0 | byte1) < 0) {
             throw new IOException(exception);
         }
 
-        final int result;
-        if (byteOrder == ByteOrder.BIG_ENDIAN) {
-            result = (byte0 << 8) | byte1;
-        } else {
-            result = (byte1 << 8) | byte0;
-        }
-
-        return result;
+        return (byte1 << 8) | byte0;
     }
 
-    public static void skipBytes(final InputStream is, final long length) throws IOException {
-        skipBytes(is, length, "Couldn't skip bytes");
+    public static void writeInt(OutputStream os, final int value) throws IOException {
+        os.write(0xff & value);
+        os.write(0xff & (value >> 8));
+        os.write(0xff & (value >> 16));
+        os.write(0xff & (value >> 24));
+    }
+
+    public static void writeShort(OutputStream os, final int value) throws IOException {
+        os.write(0xff & value);
+        os.write(0xff & (value >> 8));
     }
 }

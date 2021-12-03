@@ -26,8 +26,7 @@ class ImageFormatGuesser {
      *         attempt to read the image data
      * @throws IOException in the event of an unrecoverable I/O condition.
      */
-    public ImageFormat guessFormat(final byte[] bytes)
-            throws ImageReadException, IOException {
+    public static ImageFormat guessFormat(final byte[] bytes) throws ImageReadException, IOException {
         try (InputStream is = new ByteArrayInputStream(bytes)) {
             final int i1 = is.read();
             final int i2 = is.read();
@@ -51,7 +50,7 @@ class ImageFormatGuesser {
         }
     }
 
-    private boolean compareBytePair(final int[] a, final int[] b) {
+    private static boolean compareBytePair(final int[] a, final int[] b) {
         if (a.length != 2 && b.length != 2) {
             throw new RuntimeException("Invalid Byte Pair.");
         }

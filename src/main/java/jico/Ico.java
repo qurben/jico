@@ -16,9 +16,6 @@
  */
 package jico;
 
-import jico.common.bytesource.ByteSource;
-import jico.common.bytesource.ByteSourceInputStream;
-
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.net.URL;
@@ -47,7 +44,7 @@ public final class Ico {
             throw new IllegalArgumentException("is == null!");
         }
 
-        return read(new ByteSourceInputStream(is));
+        return new IcoImageParser().getAllBufferedImages(is);
     }
 
     /**
@@ -91,9 +88,5 @@ public final class Ico {
         try (InputStream is = url.openStream()) {
             return read(is);
         }
-    }
-
-    private static List<BufferedImage> read(final ByteSource byteSource) throws ImageReadException, IOException {
-        return new IcoImageParser().getAllBufferedImages(byteSource);
     }
 }
