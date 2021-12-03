@@ -27,7 +27,7 @@ public final class BinaryFunctions {
     private BinaryFunctions() {
     }
 
-    public static byte readByte(final String name, final InputStream is, final String exception)
+    public static byte readByte(final InputStream is, final String exception)
             throws IOException {
         final int result = is.read();
         if ((result < 0)) {
@@ -36,14 +36,7 @@ public final class BinaryFunctions {
         return (byte) (0xff & result);
     }
 
-    public static byte[] readBytes(final String name, final InputStream is, final int length)
-            throws IOException {
-        final String exception = name + " could not be read.";
-        return readBytes(name, is, length, exception);
-    }
-
-    public static byte[] readBytes(final String name, final InputStream is, final int length,
-            final String exception) throws IOException {
+    public static byte[] readBytes(final InputStream is, final int length, final String exception) throws IOException {
         if (length < 0) {
             throw new IOException(String.format("%s, invalid length: %d", exception, length));
         }
@@ -63,7 +56,7 @@ public final class BinaryFunctions {
     }
 
     public static byte[] readBytes(final InputStream is, final int count) throws IOException {
-        return readBytes("", is, count, "Unexpected EOF");
+        return readBytes(is, count, "Unexpected EOF");
     }
 
     public static void skipBytes(final InputStream is, final long length, final String exception)
@@ -78,8 +71,7 @@ public final class BinaryFunctions {
         }
     }
 
-    public static int read4Bytes(final String name, final InputStream is,
-            final String exception, final ByteOrder byteOrder) throws IOException {
+    public static int read4Bytes(final InputStream is, final String exception, final ByteOrder byteOrder) throws IOException {
         final int byte0 = is.read();
         final int byte1 = is.read();
         final int byte2 = is.read();
@@ -100,8 +92,8 @@ public final class BinaryFunctions {
         return result;
     }
 
-    public static int read2Bytes(final String name, final InputStream is,
-            final String exception, final ByteOrder byteOrder) throws IOException {
+    public static int read2Bytes(final InputStream is,
+                                 final String exception, final ByteOrder byteOrder) throws IOException {
         final int byte0 = is.read();
         final int byte1 = is.read();
         if ((byte0 | byte1) < 0) {

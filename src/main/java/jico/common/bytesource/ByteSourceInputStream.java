@@ -203,7 +203,7 @@ public class ByteSourceInputStream extends ByteSource {
     }
 
     @Override
-    public InputStream getInputStream() throws IOException {
+    public InputStream getInputStream() {
         return new CacheReadingInputStream();
     }
 
