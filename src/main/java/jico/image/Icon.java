@@ -5,7 +5,7 @@ import jico.ImageReadException;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 
-public interface IconData {
+public interface Icon {
     BufferedImage readBufferedImage()
             throws ImageReadException, IOException;
 }

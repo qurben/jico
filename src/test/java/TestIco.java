@@ -122,8 +122,8 @@ public class TestIco {
         try {
             Ico.read(getClass().getClassLoader().getResourceAsStream("jpg.jpg"));
             Assertions.fail("Expected an exception to be thrown.");
-        } catch (ImageReadException ex) {
-            Assertions.assertEquals("Not a Valid ICO File: reserved is 55551", ex.getMessage());
+        } catch (IOException | ImageReadException ex) {
+            Assertions.assertEquals("Not a Valid ICO File: reserved is -9985", ex.getMessage());
         }
     }
 }

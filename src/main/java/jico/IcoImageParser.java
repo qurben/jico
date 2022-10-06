@@ -16,20 +16,20 @@
  */
 package jico;
 
-import jico.image.BMPIconData;
-import jico.image.IconData;
-import jico.image.IconInfo;
-import jico.image.PNGIconData;
+import jico.image.BMPIcon;
+import jico.image.Icon;
+import jico.image.PNGIcon;
 
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.List;
 
-import static jico.ImageFormatGuesser.*;
-import static jico.common.BinaryFunctions.*;
+import static jico.ImageFormatGuesser.guessFormat;
 
 class IcoImageParser {
 
@@ -45,68 +45,27 @@ class IcoImageParser {
     public IcoImageParser() {
     }
 
-    private FileHeader readFileHeader(final InputStream is) throws ImageReadException, IOException {
-        final int reserved = readShort(is, "Not a Valid ICO File");
-        final int iconType = readShort(is, "Not a Valid ICO File");
-        final int iconCount = readShort(is, "Not a Valid ICO File");
-
-        if (reserved != 0) {
-            throw new ImageReadException("Not a Valid ICO File: reserved is " + reserved);
-        }
-        if (iconType != 1 && iconType != 2) {
-            throw new ImageReadException("Not a Valid ICO File: icon type is " + iconType);
-        }
-
-        return new FileHeader(reserved, iconType, iconCount);
-    }
-
-    private IconInfo readIconInfo(final InputStream is) throws IOException {
-        // Width (1 byte), Width of Icon (1 to 255)
-        /*final byte width = */readByte(is, "Not a Valid ICO File");
-        // Height (1 byte), Height of Icon (1 to 255)
-        /*final byte height = */readByte(is, "Not a Valid ICO File");
-        // ColorCount (1 byte), Number of colors, either
-        // 0 for 24 bit or higher,
-        // 2 for monochrome or 16 for 16 color images.
-        /*final byte colorCount = */readByte(is, "Not a Valid ICO File");
-        // Reserved (1 byte), Not used (always 0)
-        /*final byte reserved = */readByte(is, "Not a Valid ICO File");
-        // Planes (2 bytes), always 1
-        /*final int planes = */readShort(is, "Not a Valid ICO File");
-        // BitCount (2 bytes), number of bits per pixel (1 for monochrome,
-        // 4 for 16 colors, 8 for 256 colors, 24 for true colors,
-        // 32 for true colors + alpha channel)
-        /*final int bitCount = */readShort(is, "Not a Valid ICO File");
-        // ImageSize (4 bytes), Length of resource in bytes
-        final int imageSize = readInt(is, "Not a Valid ICO File");
-        // ImageOffset (4 bytes), start of the image in the file
-        final int imageOffset = readInt(is, "Not a Valid ICO File");
-
-        return new IconInfo(/*width, height, colorCount, reserved, planes, bitCount,*/ imageSize, imageOffset);
-    }
-
-    private IconData readIconData(final byte[] iconData)
+    private Icon getIconData(final byte[] iconData)
             throws ImageReadException, IOException {
 
         if (guessFormat(iconData) == ImageFormat.PNG) {
-            return new PNGIconData(new ByteArrayInputStream(iconData));
+            return new PNGIcon(new ByteArrayInputStream(iconData));
         }
-        return new BMPIconData(new ByteArrayInputStream(iconData));
+        return new BMPIcon(new ByteArrayInputStream(iconData));
     }
 
-    private ImageContents readImage(final InputStream byteSource)
-            throws ImageReadException, IOException {
+    private ImageContents readImage(final InputStream byteSource) throws ImageReadException, IOException {
         try (InputStream is = byteSource) {
-            final FileHeader fileHeader = readFileHeader(is);
+            final FileHeader fileHeader = new FileHeader(is);
 
             final List<IconInfo> fIconInfos = new ArrayList<>(fileHeader.iconCount);
             for (int i = 0; i < fileHeader.iconCount; i++) {
-                fIconInfos.add(readIconInfo(is));
+                fIconInfos.add(new IconInfo(is));
             }
 
             int offset = ICONDIR_SIZE + ICONDIRENTRY_SIZE * fileHeader.iconCount;
 
-            final List<IconData> fIconDatas = new ArrayList<>(fileHeader.iconCount);
+            final List<Icon> icons = new ArrayList<>(fileHeader.iconCount);
 
             for (IconInfo iconInfo : fIconInfos) {
                 long skipped = byteSource.skip(iconInfo.imageOffset - offset);
@@ -121,10 +80,10 @@ class IcoImageParser {
 
                 offset = iconInfo.imageOffset + iconInfo.imageSize;
 
-                fIconDatas.add(readIconData(iconData));
+                icons.add(getIconData(iconData));
             }
 
-            return new ImageContents(fileHeader, fIconDatas);
+            return new ImageContents(fileHeader, icons);
         }
     }
 
@@ -132,32 +91,93 @@ class IcoImageParser {
         final ImageContents contents = readImage(byteSource);
 
         final List<BufferedImage> result = new ArrayList<>(contents.fileHeader.iconCount);
-        for (final IconData iconData : contents.iconDatas) {
-            result.add(iconData.readBufferedImage());
+        for (final Icon icon : contents.icons) {
+            result.add(icon.readBufferedImage());
         }
 
         return result;
     }
 
     private static class FileHeader {
-        public final int reserved; // Reserved (2 bytes), always 0
-        public final int iconType; // IconType (2 bytes), if the image is an icon it?s 1, for cursors the value is 2.
-        public final int iconCount; // IconCount (2 bytes), number of icons in this file.
+        public static final int FILE_HEADER_SIZE = 6;
+        /**
+         * Reserved (2 bytes), always 0
+         */
+        public final short reserved;
+        /**
+         * IconType (2 bytes), if the image is an icon it?s 1, for cursors the value is 2.
+         */
+        public final short iconType;
+        /**
+         * IconCount (2 bytes), number of icons in this file.
+         */
+        public final short iconCount;
 
-        FileHeader(final int reserved, final int iconType, final int iconCount) {
-            this.reserved = reserved;
-            this.iconType = iconType;
-            this.iconCount = iconCount;
+        FileHeader(InputStream is) throws IOException {
+            ByteBuffer byteBuffer = ByteBuffer.wrap(is.readNBytes(FILE_HEADER_SIZE)).order(ByteOrder.LITTLE_ENDIAN);
+
+            reserved = byteBuffer.getShort();
+            iconType = byteBuffer.getShort();
+            iconCount = byteBuffer.getShort();
+
+            if (reserved != 0) {
+                throw new IOException("Not a Valid ICO File: reserved is " + reserved);
+            }
+            if (iconType != 1 && iconType != 2) {
+                throw new IOException("Not a Valid ICO File: icon type is " + iconType);
+            }
         }
     }
 
     private static class ImageContents {
         public final FileHeader fileHeader;
-        public final List<IconData> iconDatas;
+        public final List<Icon> icons;
 
-        ImageContents(final FileHeader fileHeader, final List<IconData> iconDatas) {
+        ImageContents(final FileHeader fileHeader, final List<Icon> icons) {
             this.fileHeader = fileHeader;
-            this.iconDatas = iconDatas;
+            this.icons = icons;
+        }
+    }
+
+    private static class IconInfo {
+        public static final int ICON_INFO_SIZE = 16;
+        /*public final byte width;
+        public final byte height;
+        public final byte colorCount;
+        public final byte reserved;
+        public final short planes;
+        public final short bitCount;*/
+        public final int imageSize;
+        public final int imageOffset;
+
+        public IconInfo(InputStream is) throws IOException {
+            ByteBuffer byteBuffer = ByteBuffer.wrap(is.readNBytes(ICON_INFO_SIZE)).order(ByteOrder.LITTLE_ENDIAN);
+
+            // Width (1 byte), Width of Icon (1 to 255)
+            /*width = */
+            byteBuffer.get();
+            // Height (1 byte), Height of Icon (1 to 255)
+            /*height = */
+            byteBuffer.get();
+            // ColorCount (1 byte), Number of colors, either
+            // 0 for 24 bit or higher,
+            // 2 for monochrome or 16 for 16 color images.
+            /*colorCount = */
+            byteBuffer.get();
+            // Reserved (1 byte), Not used (always 0)
+            /*reserved = */
+            byteBuffer.get();
+            // Planes (2 bytes), always 1
+            /*planes = */byteBuffer.getShort();
+            // BitCount (2 bytes), number of bits per pixel (1 for monochrome,
+            // 4 for 16 colors, 8 for 256 colors, 24 for true colors,
+            // 32 for true colors + alpha channel)
+            /*bitCount = */
+            byteBuffer.getShort();
+            // ImageSize (4 bytes), Length of resource in bytes
+            imageSize = byteBuffer.getInt();
+            // ImageOffset (4 bytes), start of the image in the file
+            imageOffset = byteBuffer.getInt();
         }
     }
 }

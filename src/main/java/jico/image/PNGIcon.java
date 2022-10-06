@@ -5,10 +5,10 @@ import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.InputStream;
 
-public class PNGIconData implements IconData {
+public class PNGIcon implements Icon {
     private final InputStream is;
 
-    public PNGIconData(final InputStream is) {
+    public PNGIcon(final InputStream is) {
         this.is = is;
     }
 

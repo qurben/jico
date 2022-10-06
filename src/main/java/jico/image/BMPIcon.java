@@ -5,50 +5,50 @@ import jico.ImageReadException;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
-import static jico.common.BinaryFunctions.readBytes;
-import static jico.common.BinaryFunctions.readInt;
-import static jico.common.BinaryFunctions.readShort;
-import static jico.common.BinaryFunctions.writeShort;
-import static jico.common.BinaryFunctions.writeInt;
-
-public class BMPIconData implements IconData {
-
+public class BMPIcon implements Icon {
     public static final int BITMAPV3INFOHEADER_SIZE = 56;
     public static final int BITMAPHEADER_SIZE = 14;
+    public static final byte[] MAGIC_NUMBERS_BMP = {0x42, 0x4d,};
     private final InputStream is;
 
-    public BMPIconData(final InputStream is) {
+    public BMPIcon(final InputStream is) {
         this.is = is;
     }
 
-    private BufferedImage readBitmapIconData(final InputStream is) throws ImageReadException, IOException {
-        final int size = readInt(is, "Not a Valid ICO File"); // Size (4 bytes), size of this structure (always 40)
-        final int width = readInt(is, "Not a Valid ICO File"); // Width (4 bytes), width of the image (same as iconinfo.width)
-        final int height = readInt(is, "Not a Valid ICO File"); // Height (4 bytes), scanlines in the color map + transparent map (iconinfo.height * 2)
-        final int planes = readShort(is, "Not a Valid ICO File"); // Planes (2 bytes), always 1
-        final int bitCount = readShort(is, "Not a Valid ICO File"); // BitCount (2 bytes), 1,4,8,16,24,32 (see iconinfo for details)
-        int compression = readInt(is, "Not a Valid ICO File"); // Compression (4 bytes), we don?t use this (0)
-        final int sizeImage = readInt(is, "Not a Valid ICO File"); // SizeImage
+    @Override
+    public BufferedImage readBufferedImage() throws IOException, ImageReadException {
+        ByteBuffer byteBuffer = ByteBuffer.wrap(is.readAllBytes())
+                .order(ByteOrder.LITTLE_ENDIAN);
 
-        final int xPelsPerMeter = readInt(is, "Not a Valid ICO File"); // XPelsPerMeter (4 bytes), we don?t use this (0)
-        final int yPelsPerMeter = readInt(is, "Not a Valid ICO File"); // YPelsPerMeter (4 bytes), we don?t use this (0)
-        final int colorsUsed = readInt(is, "Not a Valid ICO File"); // ColorsUsed (4 bytes), we don?t use this (0)
-        final int colorsImportant = readInt(is, "Not a Valid ICO File"); // ColorsImportant (4 bytes), we don?t
+        final int size = byteBuffer.getInt();
+        final int width = byteBuffer.getInt();
+        final int height = byteBuffer.getInt();
+        final short planes = byteBuffer.getShort();
+        final short bitCount = byteBuffer.getShort();
+        int compression = byteBuffer.getInt();
+        final int sizeImage = byteBuffer.getInt();
+        final int xPelsPerMeter = byteBuffer.getInt();
+        final int yPelsPerMeter = byteBuffer.getInt();
+        final int colorsUsed = byteBuffer.getInt();
+        final int colorsImportant = byteBuffer.getInt();
+
         // use this (0)
         int redMask = 0;
         int greenMask = 0;
         int blueMask = 0;
         int alphaMask = 0;
         if (compression == 3) {
-            redMask = readInt(is, "Not a Valid ICO File");
-            greenMask = readInt(is, "Not a Valid ICO File");
-            blueMask = readInt(is, "Not a Valid ICO File");
+            redMask = byteBuffer.getInt();
+            greenMask = byteBuffer.getInt();
+            blueMask = byteBuffer.getInt();
         }
-        final byte[] restOfFile = readBytes(is, is.available());
+        final byte[] restOfFile = new byte[byteBuffer.remaining()];
+        byteBuffer.get(restOfFile);
 
         if (size != 40) {
             throw new ImageReadException("Not a Valid ICO File: Wrong bitmap header size " + size);
@@ -71,32 +71,31 @@ public class BMPIconData implements IconData {
                 : colorsUsed);
         final int bitmapSize = BITMAPHEADER_SIZE + BITMAPV3INFOHEADER_SIZE + restOfFile.length;
 
-        final ByteArrayOutputStream baos = new ByteArrayOutputStream(bitmapSize);
-        baos.write('B');
-        baos.write('M');
-        writeInt(baos, bitmapSize);
-        writeInt(baos, 0);
-        writeInt(baos, bitmapPixelsOffset);
+        final ByteBuffer buffer = ByteBuffer.allocate(bitmapSize)
+                .order(ByteOrder.LITTLE_ENDIAN)
+                .put(MAGIC_NUMBERS_BMP)
+                .putInt(bitmapSize)
+                .putInt(0)
+                .putInt(bitmapPixelsOffset)
 
-        writeInt(baos, BITMAPV3INFOHEADER_SIZE);
-        writeInt(baos, width);
-        writeInt(baos, height / 2);
-        writeShort(baos, planes);
-        writeShort(baos, bitCount);
-        writeInt(baos, compression);
-        writeInt(baos, sizeImage);
-        writeInt(baos, xPelsPerMeter);
-        writeInt(baos, yPelsPerMeter);
-        writeInt(baos, colorsUsed);
-        writeInt(baos, colorsImportant);
-        writeInt(baos, redMask);
-        writeInt(baos, greenMask);
-        writeInt(baos, blueMask);
-        writeInt(baos, alphaMask);
-        baos.write(restOfFile);
-        baos.flush();
+                .putInt(BITMAPV3INFOHEADER_SIZE)
+                .putInt(width)
+                .putInt(height / 2)
+                .putShort(planes)
+                .putShort(bitCount)
+                .putInt(compression)
+                .putInt(sizeImage)
+                .putInt(xPelsPerMeter)
+                .putInt(yPelsPerMeter)
+                .putInt(colorsUsed)
+                .putInt(colorsImportant)
+                .putInt(redMask)
+                .putInt(greenMask)
+                .putInt(blueMask)
+                .putInt(alphaMask)
+                .put(restOfFile);
 
-        final ByteArrayInputStream bmpInputStream = new ByteArrayInputStream(baos.toByteArray());
+        final ByteArrayInputStream bmpInputStream = new ByteArrayInputStream(buffer.array());
         final BufferedImage bmpImage = ImageIO.read(bmpInputStream);
 
         // Transparency map is optional with 32 BPP icons, because they already
@@ -114,7 +113,9 @@ public class BMPIconData implements IconData {
         final int colorMapSizeBytes = t_scanline_size * (height / 2);
         byte[] transparencyMap = null;
         try {
-            transparencyMap = readBytes(bmpInputStream, colorMapSizeBytes, "Not a Valid ICO File");
+            ByteBuffer byteBuffer1 = ByteBuffer.wrap(bmpInputStream.readNBytes(colorMapSizeBytes)).order(ByteOrder.LITTLE_ENDIAN);
+            transparencyMap = new byte[byteBuffer1.remaining()];
+            byteBuffer1.get(transparencyMap);
         } catch (final IOException ioEx) {
             if (bitCount != 32) {
                 throw ioEx;
@@ -153,10 +154,5 @@ public class BMPIconData implements IconData {
             resultImage = bmpImage;
         }
         return resultImage;
-    }
-
-    @Override
-    public BufferedImage readBufferedImage() throws IOException, ImageReadException {
-        return readBitmapIconData(is);
     }
 }
