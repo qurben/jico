@@ -10,19 +10,14 @@ import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
-public class BMPIcon implements Icon {
+class BMPIcon implements Icon {
     public static final int BITMAPV3INFOHEADER_SIZE = 56;
     public static final int BITMAPHEADER_SIZE = 14;
     public static final byte[] MAGIC_NUMBERS_BMP = {0x42, 0x4d,};
-    private final InputStream is;
-
-    public BMPIcon(final InputStream is) {
-        this.is = is;
-    }
 
     @Override
-    public BufferedImage readBufferedImage() throws IOException, ImageReadException {
-        ByteBuffer byteBuffer = ByteBuffer.wrap(is.readAllBytes())
+    public BufferedImage readBufferedImage(int imageSize, final InputStream is) throws IOException, ImageReadException {
+        ByteBuffer byteBuffer = ByteBuffer.wrap(is.readNBytes(imageSize))
                 .order(ByteOrder.LITTLE_ENDIAN);
 
         final int size = byteBuffer.getInt();

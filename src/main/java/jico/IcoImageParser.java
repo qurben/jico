@@ -16,12 +16,10 @@
  */
 package jico;
 
-import jico.image.BMPIcon;
 import jico.image.Icon;
-import jico.image.PNGIcon;
 
 import java.awt.image.BufferedImage;
-import java.io.ByteArrayInputStream;
+import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
@@ -29,10 +27,9 @@ import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.List;
 
-import static jico.ImageFormatGuesser.guessFormat;
-
 class IcoImageParser {
 
+    public static final int FILE_HEADER_SIZE = 6;
     /**
      * Size of the ICONDIR header.
      */
@@ -42,113 +39,65 @@ class IcoImageParser {
      */
     private static final int ICONDIRENTRY_SIZE = 16;
 
+
     public IcoImageParser() {
     }
 
-    private Icon getIconData(final byte[] iconData)
-            throws ImageReadException, IOException {
+    public List<BufferedImage> getAllBufferedImages(final InputStream byteSource) throws ImageReadException, IOException {
+        try (InputStream is = new BufferedInputStream(byteSource, 1024)) {
+            short iconCount = getIconCount(is);
 
-        if (guessFormat(iconData) == ImageFormat.PNG) {
-            return new PNGIcon(new ByteArrayInputStream(iconData));
-        }
-        return new BMPIcon(new ByteArrayInputStream(iconData));
-    }
-
-    private ImageContents readImage(final InputStream byteSource) throws ImageReadException, IOException {
-        try (InputStream is = byteSource) {
-            final FileHeader fileHeader = new FileHeader(is);
-
-            final List<IconInfo> fIconInfos = new ArrayList<>(fileHeader.iconCount);
-            for (int i = 0; i < fileHeader.iconCount; i++) {
+            final List<IconInfo> fIconInfos = new ArrayList<>(iconCount);
+            for (int i = 0; i < iconCount; i++) {
                 fIconInfos.add(new IconInfo(is));
             }
 
-            int offset = ICONDIR_SIZE + ICONDIRENTRY_SIZE * fileHeader.iconCount;
+            int offset = ICONDIR_SIZE + ICONDIRENTRY_SIZE * iconCount;
 
-            final List<Icon> icons = new ArrayList<>(fileHeader.iconCount);
+            final List<BufferedImage> icons = new ArrayList<>(iconCount);
 
             for (IconInfo iconInfo : fIconInfos) {
-                long skipped = byteSource.skip(iconInfo.imageOffset - offset);
-                if (skipped != iconInfo.imageOffset - offset) {
+                long skipped = is.skip(iconInfo.getImageOffset() - offset);
+                if (skipped != iconInfo.getImageOffset() - offset) {
                     throw new ImageReadException("Could not skip bytes");
                 }
 
-                final byte[] iconData = byteSource.readNBytes(iconInfo.imageSize);
-                if (iconData.length != iconInfo.imageSize) {
-                    throw new ImageReadException("Could not read bytes");
-                }
+                offset = iconInfo.getImageOffset() + iconInfo.getImageSize();
 
-                offset = iconInfo.imageOffset + iconInfo.imageSize;
-
-                icons.add(getIconData(iconData));
+                icons.add(Icon.detect(is).readBufferedImage(iconInfo.getImageSize(), is));
             }
 
-            return new ImageContents(fileHeader, icons);
+            return icons;
         }
     }
 
-    public List<BufferedImage> getAllBufferedImages(final InputStream byteSource) throws ImageReadException, IOException {
-        final ImageContents contents = readImage(byteSource);
+    private short getIconCount(InputStream is) throws IOException {
+        ByteBuffer byteBuffer = ByteBuffer.wrap(is.readNBytes(FILE_HEADER_SIZE)).order(ByteOrder.LITTLE_ENDIAN);
 
-        final List<BufferedImage> result = new ArrayList<>(contents.fileHeader.iconCount);
-        for (final Icon icon : contents.icons) {
-            result.add(icon.readBufferedImage());
+        short reserved = byteBuffer.getShort();
+        short iconType = byteBuffer.getShort();
+        short iconCount = byteBuffer.getShort();
+
+        if (reserved != 0) {
+            throw new IOException("Not a Valid ICO File: reserved is " + reserved);
+        }
+        if (iconType != 1 && iconType != 2) {
+            throw new IOException("Not a Valid ICO File: icon type is " + iconType);
         }
 
-        return result;
+        return iconCount;
     }
 
-    private static class FileHeader {
-        public static final int FILE_HEADER_SIZE = 6;
-        /**
-         * Reserved (2 bytes), always 0
-         */
-        public final short reserved;
-        /**
-         * IconType (2 bytes), if the image is an icon it?s 1, for cursors the value is 2.
-         */
-        public final short iconType;
-        /**
-         * IconCount (2 bytes), number of icons in this file.
-         */
-        public final short iconCount;
-
-        FileHeader(InputStream is) throws IOException {
-            ByteBuffer byteBuffer = ByteBuffer.wrap(is.readNBytes(FILE_HEADER_SIZE)).order(ByteOrder.LITTLE_ENDIAN);
-
-            reserved = byteBuffer.getShort();
-            iconType = byteBuffer.getShort();
-            iconCount = byteBuffer.getShort();
-
-            if (reserved != 0) {
-                throw new IOException("Not a Valid ICO File: reserved is " + reserved);
-            }
-            if (iconType != 1 && iconType != 2) {
-                throw new IOException("Not a Valid ICO File: icon type is " + iconType);
-            }
-        }
-    }
-
-    private static class ImageContents {
-        public final FileHeader fileHeader;
-        public final List<Icon> icons;
-
-        ImageContents(final FileHeader fileHeader, final List<Icon> icons) {
-            this.fileHeader = fileHeader;
-            this.icons = icons;
-        }
-    }
-
-    private static class IconInfo {
-        public static final int ICON_INFO_SIZE = 16;
+    public static class IconInfo {
+        private static final int ICON_INFO_SIZE = 16;
         /*public final byte width;
         public final byte height;
         public final byte colorCount;
         public final byte reserved;
         public final short planes;
         public final short bitCount;*/
-        public final int imageSize;
-        public final int imageOffset;
+        private final int imageSize;
+        private final int imageOffset;
 
         public IconInfo(InputStream is) throws IOException {
             ByteBuffer byteBuffer = ByteBuffer.wrap(is.readNBytes(ICON_INFO_SIZE)).order(ByteOrder.LITTLE_ENDIAN);
@@ -168,7 +117,8 @@ class IcoImageParser {
             /*reserved = */
             byteBuffer.get();
             // Planes (2 bytes), always 1
-            /*planes = */byteBuffer.getShort();
+            /*planes = */
+            byteBuffer.getShort();
             // BitCount (2 bytes), number of bits per pixel (1 for monochrome,
             // 4 for 16 colors, 8 for 256 colors, 24 for true colors,
             // 32 for true colors + alpha channel)
@@ -178,6 +128,14 @@ class IcoImageParser {
             imageSize = byteBuffer.getInt();
             // ImageOffset (4 bytes), start of the image in the file
             imageOffset = byteBuffer.getInt();
+        }
+
+        public int getImageSize() {
+            return imageSize;
+        }
+
+        public int getImageOffset() {
+            return imageOffset;
         }
     }
 }
