@@ -44,9 +44,9 @@
     </developers>
 
     <scm>
-        <connection>scm:git:git://github.com/qurben/jico.git</connection>
-        <developerConnection>scm:git:ssh://github.com:qurben/jico.git</developerConnection>
-        <url>https://github.com/qurben/jico/tree/main</url>
+        <connection>scm:git:https://github.com/qurben/jico/tree/main</connection>
+        <developerConnection>scm:git:https://github.com/qurben/jico.git</developerConnection>
+        <url>https://github.com/qurben/jico</url>
     </scm>
 
     <distributionManagement>
