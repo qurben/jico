@@ -15,12 +15,43 @@ class BMPIcon implements Icon {
     public static final int BITMAPHEADER_SIZE = 14;
     public static final byte[] MAGIC_NUMBERS_BMP = {0x42, 0x4d,};
 
+    private BufferedImage processTransparency(BufferedImage bmpImage, int t_scanline_size, byte[] transparencyMap) {
+        BufferedImage resultImage = new BufferedImage(bmpImage.getWidth(), bmpImage.getHeight(), BufferedImage.TYPE_INT_ARGB);
+
+        for (int y = 0; y < resultImage.getHeight(); y++) {
+            for (int x = 0; x < resultImage.getWidth(); x++) {
+                int alpha = 0xff;
+                if (transparencyMap != null) {
+                    final int alphaByte = 0xff & transparencyMap[t_scanline_size * (bmpImage.getHeight() - y - 1) + (x / 8)];
+                    alpha = 0x01 & (alphaByte >> (7 - (x % 8)));
+                    alpha = (alpha == 0) ? 0xff : 0x00;
+                }
+                resultImage.setRGB(x, y, (alpha << 24) | (0xffffff & bmpImage.getRGB(x, y)));
+            }
+        }
+        return resultImage;
+    }
+
+    private boolean isAllAlphasZero(short bitCount, BufferedImage bmpImage) {
+        boolean allAlphasZero = true;
+        if (bitCount == 32) {
+            for (int y = 0; allAlphasZero && y < bmpImage.getHeight(); y++) {
+                for (int x = 0; x < bmpImage.getWidth(); x++) {
+                    if ((bmpImage.getRGB(x, y) & 0xff000000) != 0) {
+                        allAlphasZero = false;
+                        break;
+                    }
+                }
+            }
+        }
+        return allAlphasZero;
+    }
+
     @Override
     public BufferedImage readBufferedImage(int imageSize, final InputStream is) throws IOException, ImageReadException {
-        ByteBuffer byteBuffer = ByteBuffer.wrap(is.readNBytes(imageSize))
-                .order(ByteOrder.LITTLE_ENDIAN);
+        ByteBuffer byteBuffer = ByteBuffer.wrap(is.readNBytes(imageSize)).order(ByteOrder.LITTLE_ENDIAN);
 
-        final int size = byteBuffer.getInt();
+        final int headerSize = byteBuffer.getInt();
         final int width = byteBuffer.getInt();
         final int height = byteBuffer.getInt();
         final short planes = byteBuffer.getShort();
@@ -37,19 +68,21 @@ class BMPIcon implements Icon {
         int greenMask = 0;
         int blueMask = 0;
         int alphaMask = 0;
+
         if (compression == 3) {
             redMask = byteBuffer.getInt();
             greenMask = byteBuffer.getInt();
             blueMask = byteBuffer.getInt();
         }
+
         final byte[] restOfFile = new byte[byteBuffer.remaining()];
         byteBuffer.get(restOfFile);
 
-        if (size != 40) {
-            throw new ImageReadException("Not a Valid ICO File: Wrong bitmap header size " + size);
+        if (headerSize != 40) {
+            throw new ImageReadException("Wrong bitmap header size " + headerSize);
         }
         if (planes != 1) {
-            throw new ImageReadException("Not a Valid ICO File: Planes can't be " + planes);
+            throw new ImageReadException("Planes can't be " + planes);
         }
 
         if (compression == 0 && bitCount == 32) {
@@ -62,8 +95,7 @@ class BMPIcon implements Icon {
             alphaMask = 0xff000000;
         }
 
-        final int bitmapPixelsOffset = BITMAPHEADER_SIZE + BITMAPV3INFOHEADER_SIZE + 4 * ((colorsUsed == 0 && bitCount <= 8) ? (1 << bitCount)
-                : colorsUsed);
+        final int bitmapPixelsOffset = BITMAPHEADER_SIZE + BITMAPV3INFOHEADER_SIZE + 4 * ((colorsUsed == 0 && bitCount <= 8) ? (1 << bitCount) : colorsUsed);
         final int bitmapSize = BITMAPHEADER_SIZE + BITMAPV3INFOHEADER_SIZE + restOfFile.length;
 
         final ByteBuffer buffer = ByteBuffer.allocate(bitmapSize)
@@ -117,34 +149,9 @@ class BMPIcon implements Icon {
             }
         }
 
-        boolean allAlphasZero = true;
-        if (bitCount == 32) {
-            for (int y = 0; allAlphasZero && y < bmpImage.getHeight(); y++) {
-                for (int x = 0; x < bmpImage.getWidth(); x++) {
-                    if ((bmpImage.getRGB(x, y) & 0xff000000) != 0) {
-                        allAlphasZero = false;
-                        break;
-                    }
-                }
-            }
-        }
         BufferedImage resultImage;
-        if (allAlphasZero) {
-            resultImage = new BufferedImage(bmpImage.getWidth(),
-                    bmpImage.getHeight(), BufferedImage.TYPE_INT_ARGB);
-            for (int y = 0; y < resultImage.getHeight(); y++) {
-                for (int x = 0; x < resultImage.getWidth(); x++) {
-                    int alpha = 0xff;
-                    if (transparencyMap != null) {
-                        final int alphaByte = 0xff & transparencyMap[t_scanline_size
-                                * (bmpImage.getHeight() - y - 1) + (x / 8)];
-                        alpha = 0x01 & (alphaByte >> (7 - (x % 8)));
-                        alpha = (alpha == 0) ? 0xff : 0x00;
-                    }
-                    resultImage.setRGB(x, y, (alpha << 24)
-                            | (0xffffff & bmpImage.getRGB(x, y)));
-                }
-            }
+        if (isAllAlphasZero(bitCount, bmpImage)) {
+            resultImage = processTransparency(bmpImage, t_scanline_size, transparencyMap);
         } else {
             resultImage = bmpImage;
         }

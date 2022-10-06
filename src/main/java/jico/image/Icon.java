@@ -35,7 +35,7 @@ public interface Icon {
         inputStream.reset();
         if ((i1 < 0) || (i2 < 0)) {
             throw new ImageReadException(
-                    "Couldn't read magic numbers to guess format.");
+                    "Couldn't guess format.");
         }
 
         final int b1 = i1 & 0xff;

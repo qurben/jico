@@ -59,7 +59,7 @@ class IcoImageParser {
             for (IconInfo iconInfo : fIconInfos) {
                 long skipped = is.skip(iconInfo.getImageOffset() - offset);
                 if (skipped != iconInfo.getImageOffset() - offset) {
-                    throw new ImageReadException("Could not skip bytes");
+                    throw new ImageReadException("Invalid offset");
                 }
 
                 offset = iconInfo.getImageOffset() + iconInfo.getImageSize();
@@ -79,10 +79,10 @@ class IcoImageParser {
         short iconCount = byteBuffer.getShort();
 
         if (reserved != 0) {
-            throw new IOException("Not a Valid ICO File: reserved is " + reserved);
+            throw new IOException("Not valid, reserved is " + reserved);
         }
         if (iconType != 1 && iconType != 2) {
-            throw new IOException("Not a Valid ICO File: icon type is " + iconType);
+            throw new IOException("Not valid, icon type is " + iconType);
         }
 
         return iconCount;
