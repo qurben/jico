@@ -16,6 +16,8 @@
  */
 package jico;
 
+import jico.image.IconDetect;
+
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.net.URL;
@@ -25,6 +27,8 @@ import java.util.List;
  * The primary application programming interface (API) to the JICO library.
  */
 public final class Ico {
+    private static final IcoImageParser icoImageParser = new IcoImageParser(new IconDetect());
+
     private Ico() {
         // Instances can not be created
     }
@@ -44,7 +48,7 @@ public final class Ico {
             throw new IllegalArgumentException("is == null!");
         }
 
-        return new IcoImageParser().getAllBufferedImages(is);
+        return List.of(icoImageParser.getAllBufferedImages(is));
     }
 
     /**

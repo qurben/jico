@@ -10,7 +10,7 @@ import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
-class BMPIcon implements Icon {
+class BMPIconReader implements IconReader {
     public static final int BITMAPV3INFOHEADER_SIZE = 56;
     public static final int BITMAPHEADER_SIZE = 14;
     public static final byte[] MAGIC_NUMBERS_BMP = {0x42, 0x4d,};

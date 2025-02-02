@@ -16,7 +16,7 @@
  */
 package jico;
 
-import jico.image.Icon;
+import jico.image.IconDetect;
 
 import java.awt.image.BufferedImage;
 import java.io.BufferedInputStream;
@@ -24,8 +24,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.ArrayList;
-import java.util.List;
 
 class IcoImageParser {
 
@@ -38,25 +36,30 @@ class IcoImageParser {
      * Size of the ICONDIRENTRY header.
      */
     private static final int ICONDIRENTRY_SIZE = 16;
+    private static final int ICON_INFO_SIZE = 16;
+
+    private final IconDetect iconDetect;
 
 
-    public IcoImageParser() {
+    public IcoImageParser(IconDetect iconDetect) {
+        this.iconDetect = iconDetect;
     }
 
-    public List<BufferedImage> getAllBufferedImages(final InputStream byteSource) throws ImageReadException, IOException {
+    public BufferedImage[] getAllBufferedImages(final InputStream byteSource) throws ImageReadException, IOException {
         try (InputStream is = new BufferedInputStream(byteSource, 1024)) {
             short iconCount = getIconCount(is);
 
-            final List<IconInfo> fIconInfos = new ArrayList<>(iconCount);
+            final IconInfo[] iconInfos = new IconInfo[iconCount];
             for (int i = 0; i < iconCount; i++) {
-                fIconInfos.add(new IconInfo(is));
+                iconInfos[i] = createIconInfo(is);
             }
 
             int offset = ICONDIR_SIZE + ICONDIRENTRY_SIZE * iconCount;
 
-            final List<BufferedImage> icons = new ArrayList<>(iconCount);
+            final BufferedImage[] icons = new BufferedImage[iconCount];
 
-            for (IconInfo iconInfo : fIconInfos) {
+            for (int i = 0; i < iconInfos.length; i++) {
+                IconInfo iconInfo = iconInfos[i];
                 long skipped = is.skip(iconInfo.getImageOffset() - offset);
                 if (skipped != iconInfo.getImageOffset() - offset) {
                     throw new ImageReadException("Invalid offset");
@@ -64,7 +67,7 @@ class IcoImageParser {
 
                 offset = iconInfo.getImageOffset() + iconInfo.getImageSize();
 
-                icons.add(Icon.detect(is).readBufferedImage(iconInfo.getImageSize(), is));
+                icons[i] = iconDetect.detect(is).readBufferedImage(iconInfo.getImageSize(), is);
             }
 
             return icons;
@@ -74,9 +77,9 @@ class IcoImageParser {
     private short getIconCount(InputStream is) throws IOException {
         ByteBuffer byteBuffer = ByteBuffer.wrap(is.readNBytes(FILE_HEADER_SIZE)).order(ByteOrder.LITTLE_ENDIAN);
 
-        short reserved = byteBuffer.getShort();
-        short iconType = byteBuffer.getShort();
-        short iconCount = byteBuffer.getShort();
+        final short reserved = byteBuffer.getShort();
+        final short iconType = byteBuffer.getShort();
+        final short iconCount = byteBuffer.getShort();
 
         if (reserved != 0) {
             throw new IOException("Not valid, reserved is " + reserved);
@@ -88,46 +91,46 @@ class IcoImageParser {
         return iconCount;
     }
 
+    private IconInfo createIconInfo(InputStream is) throws IOException {
+        ByteBuffer byteBuffer = ByteBuffer.wrap(is.readNBytes(ICON_INFO_SIZE)).order(ByteOrder.LITTLE_ENDIAN);
+
+        // Width (1 byte), Width of Icon (1 to 255)
+        /*width = */
+        byteBuffer.get();
+        // Height (1 byte), Height of Icon (1 to 255)
+        /*height = */
+        byteBuffer.get();
+        // ColorCount (1 byte), Number of colors, either
+        // 0 for 24 bit or higher,
+        // 2 for monochrome or 16 for 16 color images.
+        /*colorCount = */
+        byteBuffer.get();
+        // Reserved (1 byte), Not used (always 0)
+        /*reserved = */
+        byteBuffer.get();
+        // Planes (2 bytes), always 1
+        /*planes = */
+        byteBuffer.getShort();
+        // BitCount (2 bytes), number of bits per pixel (1 for monochrome,
+        // 4 for 16 colors, 8 for 256 colors, 24 for true colors,
+        // 32 for true colors + alpha channel)
+        /*bitCount = */
+        byteBuffer.getShort();
+        // ImageSize (4 bytes), Length of resource in bytes
+        int imageSize = byteBuffer.getInt();
+        // ImageOffset (4 bytes), start of the image in the file
+        int imageOffset = byteBuffer.getInt();
+
+        return new IconInfo(imageSize, imageOffset);
+    }
+
     public static class IconInfo {
-        private static final int ICON_INFO_SIZE = 16;
-        /*public final byte width;
-        public final byte height;
-        public final byte colorCount;
-        public final byte reserved;
-        public final short planes;
-        public final short bitCount;*/
         private final int imageSize;
         private final int imageOffset;
 
-        public IconInfo(InputStream is) throws IOException {
-            ByteBuffer byteBuffer = ByteBuffer.wrap(is.readNBytes(ICON_INFO_SIZE)).order(ByteOrder.LITTLE_ENDIAN);
-
-            // Width (1 byte), Width of Icon (1 to 255)
-            /*width = */
-            byteBuffer.get();
-            // Height (1 byte), Height of Icon (1 to 255)
-            /*height = */
-            byteBuffer.get();
-            // ColorCount (1 byte), Number of colors, either
-            // 0 for 24 bit or higher,
-            // 2 for monochrome or 16 for 16 color images.
-            /*colorCount = */
-            byteBuffer.get();
-            // Reserved (1 byte), Not used (always 0)
-            /*reserved = */
-            byteBuffer.get();
-            // Planes (2 bytes), always 1
-            /*planes = */
-            byteBuffer.getShort();
-            // BitCount (2 bytes), number of bits per pixel (1 for monochrome,
-            // 4 for 16 colors, 8 for 256 colors, 24 for true colors,
-            // 32 for true colors + alpha channel)
-            /*bitCount = */
-            byteBuffer.getShort();
-            // ImageSize (4 bytes), Length of resource in bytes
-            imageSize = byteBuffer.getInt();
-            // ImageOffset (4 bytes), start of the image in the file
-            imageOffset = byteBuffer.getInt();
+        public IconInfo(final int imageSize, final int imageOffset) throws IOException {
+            this.imageSize = imageSize;
+            this.imageOffset = imageOffset;
         }
 
         public int getImageSize() {

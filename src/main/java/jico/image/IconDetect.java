@@ -2,13 +2,11 @@ package jico.image;
 
 import jico.ImageReadException;
 
-import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.InputStream;
 
-public interface Icon {
-    BufferedImage readBufferedImage(int size, InputStream inputStream)
-            throws ImageReadException, IOException;
+public final class IconDetect {
+    public IconDetect() {}
 
     /**
      * Attempts to determine the image format of a file based on its
@@ -28,7 +26,7 @@ public interface Icon {
      *                            attempt to read the image data
      * @throws IOException        in the event of an unrecoverable I/O condition.
      */
-    static Icon detect(InputStream inputStream) throws IOException, ImageReadException {
+    public IconReader detect(InputStream inputStream) throws IOException, ImageReadException {
         inputStream.mark(2);
         final int i1 = inputStream.read();
         final int i2 = inputStream.read();
@@ -38,14 +36,10 @@ public interface Icon {
                     "Couldn't guess format.");
         }
 
-        final int b1 = i1 & 0xff;
-        final int b2 = i2 & 0xff;
-        final int[] bytePair = {b1, b2,};
-
-        if ((0x89 == bytePair[0]) && (0x50 == bytePair[1])) {
-            return new PNGIcon();
+        if (0x89 == (i1 & 0xff) && 0x50 == (i2 & 0xff)) {
+            return new PNGIconReader();
         }
 
-        return new BMPIcon();
+        return new BMPIconReader();
     }
 }

@@ -6,7 +6,7 @@ import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
-class PNGIcon implements Icon {
+class PNGIconReader implements IconReader {
     @Override
     public BufferedImage readBufferedImage(int imageSize, final InputStream is) throws IOException {
         return ImageIO.read(new BufferedInputStream(is, imageSize));
